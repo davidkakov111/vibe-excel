@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SharePermission {
+  VIEW
+  EDIT
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  passwordHash      String
+  name              String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  spreadsheets      Spreadsheet[]
+  spreadsheetShares SpreadsheetShare[]
+}
+
+model Spreadsheet {
+  id        String             @id @default(cuid())
+  userId    String
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  rowCount  Int                @default(100)
+  colCount  Int                @default(26)
+  cells     Json               @default("{}")
+  revision  Int                @default(0)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  shares    SpreadsheetShare[]
+  versions  SpreadsheetVersion[]
+
+  @@index([userId])
+}
+
+model SpreadsheetVersion {
+  id            String   @id @default(cuid())
+  spreadsheetId String
+  spreadsheet   Spreadsheet @relation(fields: [spreadsheetId], references: [id], onDelete: Cascade)
+  revision      Int
+  workbook      Json
+  createdById   String
+  authorName    String?
+  label         String   @default("Auto-save")
+  createdAt     DateTime @default(now())
+
+  @@index([spreadsheetId, createdAt(sort: Desc)])
+}
+
+model SpreadsheetShare {
+  id            String          @id @default(cuid())
+  spreadsheetId String
+  spreadsheet   Spreadsheet     @relation(fields: [spreadsheetId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission    SharePermission
+  createdAt     DateTime        @default(now())
+
+  @@unique([spreadsheetId, userId])
+  @@index([userId])
+}

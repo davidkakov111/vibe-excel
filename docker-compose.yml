@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: excel
+      POSTGRES_PASSWORD: excel
+      POSTGRES_DB: excel_editor
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U excel -d excel_editor"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://excel:excel@db:5432/excel_editor
+      AUTH_SECRET: local-docker-dev-secret-change-me
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      NEXTAUTH_SECRET: local-docker-dev-secret-change-me
+      NEXTAUTH_URL: http://localhost:3000
+      # Must listen on all interfaces inside the container (not localhost only).
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
